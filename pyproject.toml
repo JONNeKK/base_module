@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "base"
+version = "0.0.1"
+description = "Some Python utils I regularly use."
+readme = "README.md"
+
+authors = [
+    {name = "Jannek Schaffert", email = "121396590+JONNeKK@users.noreply.github.com"}
+]
+
+
+requires-python = ">=3.13"
+dependencies = [
+    "dacite>=1.9.2",
+    "colorlog>=6.10.1"
+]
