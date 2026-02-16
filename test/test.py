@@ -7,7 +7,7 @@ import sys
 
 
 from foundation import BaseConfig, BaseCLIParser
-from foundation import init_root_logger
+from foundation.log import init_root_logger
 
 
 TConfig = TypeVar("TConfig", bound="BaseConfig")
@@ -34,7 +34,7 @@ def add_test_params(parser):
 class CLIParser(BaseCLIParser):
     def __init__(self, config_class: Type[TConfig]) -> None:
         super().__init__(config_class)
-        self.config_class = TestConfig
+        self.config_class = TestConfig # Is this line even necessary now?
         self.append_param_func(add_test_params)
 
 
