@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import Tuple, TypeVar, Type
 from pathlib import Path
 import logging
 
@@ -8,6 +8,9 @@ import sys
 
 from foundation import BaseConfig, BaseCLIParser
 from foundation import init_root_logger
+
+
+TConfig = TypeVar("TConfig", bound="BaseConfig")
 
 
 @dataclass
@@ -29,8 +32,8 @@ def add_test_params(parser):
 
 
 class CLIParser(BaseCLIParser):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, config_class: Type[TConfig]) -> None:
+        super().__init__(config_class)
         self.config_class = TestConfig
         self.append_param_func(add_test_params)
 
@@ -39,12 +42,12 @@ class CLIParser(BaseCLIParser):
 def testing():
     init_root_logger()
     log = logging.getLogger()
-    cli_parser = CLIParser()
-    cfg: TestConfig = cli_parser.parse_args() # type: ignore
+    cli_parser = CLIParser(TestConfig)
+    cfg: TestConfig = cli_parser.parse_args()
     log.debug(cfg.nested.test_value_int)
     cfg.cfg_file_name_save = cfg.cfg_file_name_load = "test"
     cfg.save()
-    cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load")) # type: ignore
+    cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"))
     log.debug(cfg2)
     log.debug(cfg2.nested.test_value_int)
     

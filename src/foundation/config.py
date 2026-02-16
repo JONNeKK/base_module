@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict, field, fields
-from typing import Optional, Tuple, Dict, Any, Type
+from typing import Optional, Tuple, Dict, Any, Type, TypeVar
 import logging
 import json
 import datetime
@@ -10,7 +10,7 @@ from .utils.utils_filesystem import ensure_dir_exists
 
 
 log = logging.getLogger(__name__)
-
+T = TypeVar("T", bound="BaseConfig")
 
 @dataclass
 class BaseConfig:
@@ -128,7 +128,7 @@ class BaseConfig:
                 json_params[key] = tuple(json_params[key])
 
     @classmethod
-    def cfg_load(cls: Type["BaseConfig"], cfg_filename: Path) -> "BaseConfig":
+    def cfg_load(cls: Type[T], cfg_filename: Path) -> T:
 
         if not Path.is_file(cfg_filename):
             raise Exception(

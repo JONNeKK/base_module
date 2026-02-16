@@ -1,6 +1,6 @@
 import logging
 import argparse
-from typing import Dict, Any, Tuple, Type, Callable, List
+from typing import Dict, Any, Tuple, Type, Callable, List, TypeVar, Generic
 
 from .arguments import add_extra_params, add_config_params
 from .config import BaseConfig
@@ -8,14 +8,15 @@ from .config import BaseConfig
 log = logging.getLogger(__name__)
 
 ParamFunc = Callable[[argparse.ArgumentParser], None]
+TConfig = TypeVar("TConfig", bound="BaseConfig")
 
 
-class BaseCLIParser:
-    config_class: Type[BaseConfig]
+class BaseCLIParser(Generic[TConfig]):
+    config_class: Type[TConfig]
     _param_funcs: List[ParamFunc]
 
-    def __init__(self) -> None:
-        self.config_class = BaseConfig # Overwrite this if you are using another Config!!
+    def __init__(self, config_class: Type[TConfig]) -> None:
+        self.config_class = config_class # Overwrite this if you are using another Config!!
         self._param_funcs = [add_extra_params, add_config_params] # Add other functions to this list!
 
     def append_param_func(self, param_func: ParamFunc):
@@ -61,7 +62,7 @@ class BaseCLIParser:
                 unpacked[k] = v
         return unpacked
     
-    def parse_args(self, argv=None) -> BaseConfig:
+    def parse_args(self, argv=None) -> TConfig:
         parser, args = self.build_parser(argv)
         
         extras = self.parse_extras(args.extra)
@@ -72,3 +73,4 @@ class BaseCLIParser:
         cfg = self.config_class(**cli_args)
         cfg.cmd_args = cli_args
         return cfg
+
