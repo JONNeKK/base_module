@@ -43,28 +43,3 @@ def remove_if_exists(file: Path):
 
 
 
-
-
-# CLI parsing
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, str) and v.lower() in ("true",):
-        return True
-    elif isinstance(v, str) and v.lower() in ("false",):
-        return False
-    else:
-        raise argparse.ArgumentTypeError("Boolean value expected")
-
-
-def is_dataclass_type(tp):
-    if is_dataclass(tp):
-        return True
-
-    origin = get_origin(tp)
-    if origin is None:
-        return False
-
-    return any(is_dataclass(arg) for arg in get_args(tp))
-
-

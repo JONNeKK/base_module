@@ -1,11 +1,12 @@
 from dataclasses import dataclass, asdict, field, fields
-from typing import Optional, Tuple, Dict, Any, TypeVar, Type
+from typing import Optional, Tuple, Dict, Any, Type
 import logging
 import json
 import datetime
 from pathlib import Path
 
-from src.utils import is_dataclass_type, ensure_dir_exists
+from .utils.utils_parsing import is_dataclass_type
+from .utils.utils_filesystem import ensure_dir_exists
 
 
 log = logging.getLogger(__name__)
@@ -48,11 +49,9 @@ class BaseConfig:
             dict_item = getattr(self, nested_class)
             type_item = self.__annotations__.get(nested_class)
             assert type_item
-            assert isinstance(dict_item, dict)
-            setattr(self, nested_class, type_item(**dict_item))
-        # If I want to avoid using dacite, I need to redeclare the nested dataclasses here! 
-        # Would be nice to actually do this at some point to avoid extra dependencies.
-        # However the current setup allows for more than two nested layers. Don't know yet if that is really necessary
+            if isinstance(dict_item, dict):
+                setattr(self, nested_class, type_item(**dict_item))
+
     
     @classmethod
     def collect_nested_dataclasses(cls):
@@ -69,12 +68,12 @@ class BaseConfig:
             raise NameError(f"Incorrect mode {mode} specified in Config.get_cfg_file_path!")
         assert cfg_file_name, "There is no file name to return a config"
         json_name = cfg_file_name + '.json'
-        return ensure_dir_exists(self.current_run_dir / self.cfg_save_dir / json_name)
+        return ensure_dir_exists(self.current_run_dir / self.cfg_save_dir) / json_name
     
     def get_logfile_path(self) -> Path:
         assert self.log_dir, "No log directory specified!"
         logfile_name = f"log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-        return ensure_dir_exists(self.current_run_dir / self.log_dir / logfile_name)
+        return ensure_dir_exists(self.current_run_dir / self.log_dir) / logfile_name
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

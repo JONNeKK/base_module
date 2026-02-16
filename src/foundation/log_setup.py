@@ -1,6 +1,7 @@
 import logging
 from colorlog import ColoredFormatter
 from pathlib import Path
+from typing import Union
 
 
 
@@ -16,7 +17,7 @@ def infov(self, message, *args, **kwargs) -> None:
 logging.Logger.infov = infov # type: ignore
 
 
-def create_formatter(colour: bool) -> ColoredFormatter | logging.Formatter:
+def create_formatter(colour: bool) -> Union[ColoredFormatter,logging.Formatter]:
     if colour:
         return ColoredFormatter(
             "%(log_color)s[%(asctime)s][%(process)05d] %(message)s",
@@ -36,7 +37,7 @@ def create_formatter(colour: bool) -> ColoredFormatter | logging.Formatter:
     else:
         return logging.Formatter(fmt="[%(asctime)s][%(process)05d] %(message)s", datefmt=None, style="%")
 
-def create_file_handler(path: Path, level: logging._Level) -> logging.FileHandler:
+def create_file_handler(path: Path, level) -> logging.FileHandler:
     file_handler = logging.FileHandler(path)
     file_handler.setLevel(level)
     file_handler.setFormatter(create_formatter(colour = False))
@@ -73,10 +74,11 @@ def has_stream_handler(log: logging.Logger) -> bool:
     return False
 
 
-def init_root_logger(default_level: logging._Level = logging.DEBUG):
+def init_root_logger(default_level = logging.DEBUG):
     logger = logging.getLogger()
     logger.setLevel(default_level)
     # Create and configure the stream (console) handler
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(create_formatter(colour = True))
+    logger.addHandler(stream_handler)
 

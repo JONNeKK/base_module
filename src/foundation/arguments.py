@@ -1,7 +1,7 @@
 from pathlib import Path
 import argparse
 
-from src.utils import str2bool
+from .utils.utils_parsing import str2bool
     
 
 def add_extra_params(parser: argparse.ArgumentParser):

@@ -1,9 +1,9 @@
 import logging
 import argparse
-from typing import Dict, Any, Tuple, Type, Callable
+from typing import Dict, Any, Tuple, Type, Callable, List
 
-from arguments import add_extra_params, add_config_params
-from src.config import BaseConfig
+from .arguments import add_extra_params, add_config_params
+from .config import BaseConfig
 
 log = logging.getLogger(__name__)
 
@@ -12,7 +12,11 @@ ParamFunc = Callable[[argparse.ArgumentParser], None]
 
 class BaseCLIParser:
     config_class: Type[BaseConfig]
-    _param_funcs: list[ParamFunc] = [add_extra_params, add_config_params]
+    _param_funcs: List[ParamFunc]
+
+    def __init__(self) -> None:
+        self.config_class = BaseConfig # Overwrite this if you are using another Config!!
+        self._param_funcs = [add_extra_params, add_config_params] # Add other functions to this list!
 
     def append_param_func(self, param_func: ParamFunc):
         self._param_funcs.append(param_func)
@@ -40,7 +44,7 @@ class BaseCLIParser:
     def parse_base(self, args: argparse.Namespace) -> dict:
         unpacked = {}
         nested_keys = self.config_class.collect_nested_dataclasses()
-        log.debug(nested_keys)
+        log.debug("Nested Keys %s" % nested_keys)
 
         for k, v in vars(args).items():
             if v is None:
@@ -57,7 +61,7 @@ class BaseCLIParser:
                 unpacked[k] = v
         return unpacked
     
-    def parse_args(self, argv) -> BaseConfig:
+    def parse_args(self, argv=None) -> BaseConfig:
         parser, args = self.build_parser(argv)
         
         extras = self.parse_extras(args.extra)
@@ -65,6 +69,6 @@ class BaseCLIParser:
         args.extras = extras
 
         cli_args = self.parse_base(args)
-        cfg = self.config_class(**cli_args, extras=extras)
+        cfg = self.config_class(**cli_args)
         cfg.cmd_args = cli_args
         return cfg
