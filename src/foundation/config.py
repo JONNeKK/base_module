@@ -1,53 +1,19 @@
 from dataclasses import dataclass, asdict, field, fields
-from typing import Optional, Dict, Any, Type, TypeVar, ClassVar, List
+from typing import Optional, Dict, Any, Type, TypeVar, ClassVar
 import logging
 import json
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
-from decimal import Decimal
-from uuid import UUID
 from enum import Enum
 from dacite import from_dict as from_dict_dacite, Config
 
 from .utils.utils_parsing import is_dataclass_type
 from .utils.utils_filesystem import ensure_dir_exists
-
+from .utils.utils_config import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS
 
 log = logging.getLogger(__name__)
-T = TypeVar("T", bound="BaseConfig")
 
-
-
-class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, (datetime, date)):
-            return o.isoformat()
-        if isinstance(o, Decimal):
-            return str(o)
-        if isinstance(o, UUID):
-            return str(o)
-        if isinstance(o, Enum):
-            return o.value
-        if isinstance(o, (set, frozenset)):
-            return list(o)
-        if isinstance(o, Path):
-            return str(o)
-        if isinstance(o, Type):
-            return str(o)
-
-        return super().default(o)
-
-# --- central default converters ---
-DEFAULT_CONVERTERS: Dict[Type, Any] = {
-    datetime: datetime.fromisoformat,
-    date: date.fromisoformat,
-    Decimal: Decimal,
-    UUID: UUID,
-    Path: Path,
-}
-
-DEFAULT_CAST: List[Type] = [list, tuple, set]
-
+TConfig = TypeVar("TConfig", bound="BaseConfig")
 
 
 @dataclass
@@ -170,7 +136,7 @@ class BaseConfig:
         )
 
     @classmethod
-    def cfg_load(cls: Type[T], cfg_filename: Path) -> T:
+    def cfg_load(cls: Type[TConfig], cfg_filename: Path) -> TConfig:
 
         if not Path.is_file(cfg_filename):
             raise Exception(
