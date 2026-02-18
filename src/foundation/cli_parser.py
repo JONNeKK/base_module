@@ -70,8 +70,8 @@ class BaseCLIParser(Generic[TConfig]):
         args.extras = extras
 
         cli_args = self.parse_base(args)
-        self.config_class.convert2fields(cli_args)
-        cfg = self.config_class(**cli_args)
+
+        cfg = self.config_class.from_dict(cli_args) 
         cfg.cmd_args = cli_args
         return cfg
 

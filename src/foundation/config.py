@@ -1,9 +1,13 @@
 from dataclasses import dataclass, asdict, field, fields
-from typing import Optional, Tuple, Dict, Any, Type, TypeVar
+from typing import Optional, Dict, Any, Type, TypeVar, ClassVar, List
 import logging
 import json
-import datetime
+from datetime import date, datetime
 from pathlib import Path
+from decimal import Decimal
+from uuid import UUID
+from enum import Enum
+from dacite import from_dict as from_dict_dacite, Config
 
 from .utils.utils_parsing import is_dataclass_type
 from .utils.utils_filesystem import ensure_dir_exists
@@ -11,6 +15,40 @@ from .utils.utils_filesystem import ensure_dir_exists
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound="BaseConfig")
+
+
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        if isinstance(o, Decimal):
+            return str(o)
+        if isinstance(o, UUID):
+            return str(o)
+        if isinstance(o, Enum):
+            return o.value
+        if isinstance(o, (set, frozenset)):
+            return list(o)
+        if isinstance(o, Path):
+            return str(o)
+        if isinstance(o, Type):
+            return str(o)
+
+        return super().default(o)
+
+# --- central default converters ---
+DEFAULT_CONVERTERS: Dict[Type, Any] = {
+    datetime: datetime.fromisoformat,
+    date: date.fromisoformat,
+    Decimal: Decimal,
+    UUID: UUID,
+    Path: Path,
+}
+
+DEFAULT_CAST: List[Type] = [list, tuple, set]
+
+
 
 @dataclass
 class BaseConfig:
@@ -25,9 +63,11 @@ class BaseConfig:
     current_run_dir: Path           = Path.cwd()
 
     # Config
-    cfg_file_name_save: Optional[str]   = None
-    cfg_file_name_load: Optional[str]   = None
-    override_from_cmd: bool             = False
+    cfg_file_name_save: Optional[str]               = None
+    cfg_file_name_load: Optional[str]               = None
+    override_from_cmd: bool                         = False
+    json_encoder: ClassVar[Type[json.JSONEncoder]]  = CustomJSONEncoder
+
     cmd_args: Dict[str, Any]            = field(default_factory=dict)
 
     # Debug Flags
@@ -44,13 +84,7 @@ class BaseConfig:
 
 
     def __post_init__(self):
-        nested_classes = self.collect_nested_dataclasses()
-        for nested_class in nested_classes:
-            dict_item = getattr(self, nested_class)
-            type_item = self.__annotations__.get(nested_class)
-            assert type_item
-            if isinstance(dict_item, dict):
-                setattr(self, nested_class, type_item(**dict_item))
+        pass
 
     
     @classmethod
@@ -72,7 +106,7 @@ class BaseConfig:
     
     def get_logfile_path(self) -> Path:
         assert self.log_dir, "No log directory specified!"
-        logfile_name = f"log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        logfile_name = f"log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
         return ensure_dir_exists(self.current_run_dir / self.log_dir) / logfile_name
 
     def to_dict(self) -> Dict[str, Any]:
@@ -110,22 +144,30 @@ class BaseConfig:
         assert self.cfg_save_dir is not None, "run_dir must be set before saving config"
         self.cfg_save_dir.mkdir(parents=True, exist_ok=True)
         with open(self.get_cfg_file_path("save"), "w") as f:
-            json.dump(self.to_dict(), f, indent=2, cls=PathEncoder) # Alternative would be to adjust self.to_dict()
-
+            json.dump(self.to_dict(), f, indent=2, cls=self.json_encoder) # Alternative would be to adjust self.to_dict()
 
     @classmethod
-    def convert2fields(cls, json_params):
-        # Converting Strings back to Paths when necessary
-        path_fields = {f.name for f in fields(cls) if f.type == Path}
-        for key in path_fields:
-            if key in json_params and json_params[key] is not None:
-                json_params[key] = Path(json_params[key])
-                
-        # Converting arrays back to Tuples when necessary
-        tuple_fields = {f.name for f in fields(cls) if f.type == Tuple}
-        for key in tuple_fields:
-            if key in json_params and json_params[key] is not None:
-                json_params[key] = tuple(json_params[key])
+    def build_type_hooks(cls) -> Dict[Type, Any]:
+        hooks = dict(DEFAULT_CONVERTERS)  # start with base converters
+
+        # automatically add Enum converters for any Enum fields
+        for f in fields(cls):
+            if isinstance(f.type, type) and issubclass(f.type, Enum):
+                hooks[f.type] = lambda v, t=f.type: t(v)
+        return hooks
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        hooks = {}
+        for base in reversed(cls.__mro__):
+            if hasattr(base, "build_type_hooks"):
+                hooks.update(base.build_type_hooks())
+
+        return from_dict_dacite(
+            data_class=cls,
+            data=data,
+            config=Config(type_hooks=hooks, cast=DEFAULT_CAST)
+        )
 
     @classmethod
     def cfg_load(cls: Type[T], cfg_filename: Path) -> T:
@@ -141,11 +183,8 @@ class BaseConfig:
             json_params = json.load(json_file)
             log.warning("Loading existing experiment configuration from %s", cfg_filename)
             log.debug(json_params)
-        
-        cls.convert2fields(json_params)
 
-        
-        loaded_cfg: "BaseConfig" = cls(**json_params)
+        loaded_cfg: "BaseConfig" = cls.from_dict(json_params)
 
         if loaded_cfg.override_from_cmd:
             log.debug("Start overriding from cmd")
@@ -162,9 +201,4 @@ class BaseConfig:
 
 
 
-class PathEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, Path):
-            return str(o)  # Convert Path to string
-        return super().default(o)
     

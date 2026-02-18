@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Tuple, TypeVar, Type
 from pathlib import Path
+from datetime import datetime
 import logging
 
 import sys
@@ -22,6 +23,7 @@ class NestedDataClass:
 class TestConfig(BaseConfig):
     test_value_int: int = 10
     test_value_str: str = "Hello World"
+    test_date: datetime = datetime(2026,12,1)
 
     nested: NestedDataClass = field(default_factory=NestedDataClass)
 
@@ -50,6 +52,7 @@ def testing():
     cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"))
     log.debug(cfg2)
     log.debug(cfg2.nested.test_value_int)
+    log.info(cfg2.json_encoder)
     
 
 
