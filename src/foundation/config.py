@@ -158,10 +158,6 @@ class BaseConfig:
         
         return loaded_cfg
 
-    def postprocess(self):
-        pass
-        
-
     def validate(self):
         pass
 
