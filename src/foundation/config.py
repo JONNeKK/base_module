@@ -106,9 +106,11 @@ class BaseConfig:
         log.info("Fully updated the Config Class!")
 
 
-    def save(self) -> None:
-        assert self.cfg_save_dir is not None, "run_dir must be set before saving config"
-        self.cfg_save_dir.mkdir(parents=True, exist_ok=True)
+    def save(self, cfg_save_dir: Optional[Path] = None) -> None:
+        if cfg_save_dir == None:
+            cfg_save_dir = self.cfg_save_dir
+        assert cfg_save_dir is not None, "cfg_save_dir must be set before saving config"
+        cfg_save_dir.mkdir(parents=True, exist_ok=True)
         with open(self.get_cfg_file_path("save"), "w") as f:
             json.dump(self.to_dict(), f, indent=2, cls=self.json_encoder) # Alternative would be to adjust self.to_dict()
 
