@@ -8,7 +8,7 @@ from enum import Enum
 from dacite import from_dict as from_dict_dacite, Config
 
 from .utils.utils_parsing import is_dataclass_type
-from .utils.utils_filesystem import ensure_dir_exists
+from .utils.utils_filesystem import ensure_dir_exists, ensure_parents_exist
 from .utils.utils_config import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS
 
 log = logging.getLogger(__name__)
@@ -106,12 +106,13 @@ class BaseConfig:
         log.info("Fully updated the Config Class!")
 
 
-    def save(self, cfg_save_dir: Optional[Path] = None) -> None:
-        if cfg_save_dir == None:
-            cfg_save_dir = self.cfg_save_dir
-        assert cfg_save_dir is not None, "cfg_save_dir must be set before saving config"
-        cfg_save_dir.mkdir(parents=True, exist_ok=True)
-        with open(self.get_cfg_file_path("save"), "w") as f:
+    def save(self, cfg_save_filename: Optional[Path] = None) -> None:
+        if cfg_save_filename == None:
+            cfg_save_filename = self.get_cfg_file_path("save")
+        else:
+            ensure_parents_exist(cfg_save_filename)
+        assert cfg_save_filename is not None, "cfg_save_dir must be set before saving config"
+        with open(cfg_save_filename, "w") as f:
             json.dump(self.to_dict(), f, indent=2, cls=self.json_encoder) # Alternative would be to adjust self.to_dict()
 
     @classmethod

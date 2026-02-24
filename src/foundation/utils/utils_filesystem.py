@@ -15,6 +15,12 @@ def ensure_dir_exists(path:Path) -> Path:
     return path
 
 
+def ensure_parents_exist(path:Path) -> Path:
+    if not Path.exists(path.parent):
+        Path.mkdir(path.parent, parents=True, exist_ok=True)
+    return path
+
+
 def maybe_ensure_dir_exists(path: Path, mkdir: bool) -> Path:
     if mkdir:
         return ensure_dir_exists(path)

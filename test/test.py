@@ -9,6 +9,7 @@ import sys
 
 from foundation import BaseConfig, BaseCLIParser
 from foundation.log import init_root_logger
+from foundation.utils import ensure_dir_exists
 
 
 TConfig = TypeVar("TConfig", bound="BaseConfig")
@@ -49,6 +50,8 @@ def testing():
     log.debug(cfg.nested.test_value_int)
     cfg.cfg_file_name_save = cfg.cfg_file_name_load = "test"
     cfg.save()
+    cfg.cfg_file_name_save = None
+    cfg.save(ensure_dir_exists(cfg.current_run_dir / "configs") / 'test2.json')
     cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"))
     log.debug(cfg2)
     log.debug(cfg2.nested.test_value_int)
