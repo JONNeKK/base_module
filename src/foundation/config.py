@@ -10,6 +10,7 @@ from dacite import from_dict as from_dict_dacite, Config
 from .utils.utils_parsing import is_dataclass_type
 from .utils.utils_filesystem import ensure_dir_exists, ensure_parents_exist
 from .utils.utils_config import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS
+from .utils.git import get_git_commit_hash
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +29,10 @@ class BaseConfig:
     cfg_save_dir: Path              = Path("configs")
     current_run_dir: Path           = Path.cwd()
 
+    # Git
+    git_hash: str           = "empty"
+    git_repo_name: str      = "empty"
+
     # Config
     cfg_file_name_save: Optional[str]               = None
     cfg_file_name_load: Optional[str]               = None
@@ -41,7 +46,7 @@ class BaseConfig:
 
     # Logging
     log_dir: Optional[str]      = None
-    log_level: int              = logging.DEBUG
+    log_level: int              = logging.INFO
 
 
     # Extras which can be arbitrarily defined at runtime
@@ -50,7 +55,11 @@ class BaseConfig:
 
 
     def __post_init__(self):
-        pass
+        if self.debug:
+            log.info("Debugging enabled!")
+            self.log_level = logging.DEBUG
+            log.debug("Retrieving git hash & repo name")
+            self.git_hash, self.git_repo_name = get_git_commit_hash()
 
     
     @classmethod
