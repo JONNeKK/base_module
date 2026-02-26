@@ -7,9 +7,9 @@ from pathlib import Path
 from enum import Enum
 from dacite import from_dict as from_dict_dacite, Config
 
-from .utils.utils_parsing import is_dataclass_type
-from .utils.utils_filesystem import ensure_dir_exists, ensure_parents_exist
-from .utils.utils_config import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS
+from .utils.parsing import is_dataclass_type
+from .utils.filesystem import ensure_dir_exists, ensure_parents_exist
+from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS
 from .utils.git import get_git_commit_hash
 
 log = logging.getLogger(__name__)
@@ -26,12 +26,12 @@ class BaseConfig:
     """
 
     # File Context
-    cfg_save_dir: Path              = Path("configs")
-    current_run_dir: Path           = Path.cwd()
+    cfg_save_dir: Path      = Path("configs")
+    current_run_dir: Path   = Path.cwd()
 
     # Git
-    git_hash: str           = "empty"
-    git_repo_name: str      = "empty"
+    git_hash: str       = "empty"
+    git_repo_name: str  = "empty"
 
     # Config
     cfg_file_name_save: Optional[str]               = None
@@ -39,18 +39,18 @@ class BaseConfig:
     override_from_cmd: bool                         = False
     json_encoder: ClassVar[Type[json.JSONEncoder]]  = CustomJSONEncoder
 
-    cmd_args: Dict[str, Any]            = field(default_factory=dict)
+    cmd_args: Dict[str, Any]    = field(default_factory=dict)
 
     # Debug Flags
-    debug: bool                     = False
+    debug: bool = False
 
     # Logging
-    log_dir: Optional[str]      = None
-    log_level: int              = logging.INFO
+    log_dir: Optional[str]  = None
+    log_level: int          = logging.INFO
 
 
     # Extras which can be arbitrarily defined at runtime
-    extras: Dict[str, Any]      = field(default_factory=dict)
+    extras: Dict[str, Any]  = field(default_factory=dict)
 
 
 
