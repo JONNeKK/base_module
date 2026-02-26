@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from enum import Enum
-from dacite import from_dict as from_dict_dacite, Config
+from dacite import from_dict as dacite_from_dict, Config as DaciteConfig
 
 from .utils.parsing import is_dataclass_type
 from .utils.filesystem import ensure_dir_exists, ensure_parents_exist
@@ -141,10 +141,10 @@ class BaseConfig:
             if hasattr(base, "build_type_hooks"):
                 hooks.update(base.build_type_hooks())
 
-        return from_dict_dacite(
+        return dacite_from_dict(
             data_class=cls,
             data=data,
-            config=Config(type_hooks=hooks, cast=DEFAULT_CAST)
+            config=DaciteConfig(type_hooks=hooks, cast=DEFAULT_CAST)
         )
 
     @classmethod
