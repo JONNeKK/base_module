@@ -37,3 +37,11 @@ DEFAULT_CONVERTERS: Dict[Type, Any] = {
 
 DEFAULT_CAST: List[Type] = [list, tuple, set]
 
+
+def apply_overwrite(config_dict: dict, key: str, value: Any):
+    keys = key.split(".")
+    d = config_dict
+    for k in keys[:-1]:
+        d = d[k]
+    d[keys[-1]] = value
+

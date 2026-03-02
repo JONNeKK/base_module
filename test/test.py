@@ -49,13 +49,15 @@ def testing():
     cfg: TestConfig = cli_parser.parse_args()
     log.debug(cfg.nested.test_value_int)
     cfg.cfg_file_name_save = cfg.cfg_file_name_load = "test"
-    cfg.save()
+    # cfg.save()
     cfg.cfg_file_name_save = None
     cfg.save(ensure_dir_exists(cfg.current_run_dir / "configs") / 'test2.json')
-    cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"))
-    log.debug(cfg2)
-    log.debug(cfg2.nested.test_value_int)
-    log.info(cfg2.json_encoder)
+    cfg.cmd_args["nested.test_value_int"] = 10
+    log.info(cfg.cmd_args)
+    cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"), cfg.cmd_args)
+    # log.debug(cfg2)
+    # log.debug(cfg2.nested.test_value_int)
+    log.info(cfg2.log_level)
     log.debug(cfg2.to_str())
     
 

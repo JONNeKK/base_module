@@ -21,7 +21,7 @@ def add_config_params(parser: argparse.ArgumentParser):
 
     # Config
     parser.add_argument("--cfg_file_name", type=str, default=None, help="Config file name")
-    parser.add_argument("--override_from_cmd", type=str2bool, default=None, help="Override from command line")
+    parser.add_argument("--overwrite_from_cmd", type=str2bool, default=None, help="Overwrite from command line")
     # cmd_args will be populated later, no CLI argument
 
     # Debug Flags

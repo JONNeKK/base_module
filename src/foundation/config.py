@@ -9,7 +9,7 @@ from dacite import from_dict as dacite_from_dict, Config as DaciteConfig
 
 from .utils.parsing import is_dataclass_type
 from .utils.filesystem import ensure_dir_exists, ensure_parents_exist
-from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS
+from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS, apply_overwrite
 from .utils.git import get_git_commit_hash
 
 log = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class BaseConfig:
     # Config
     cfg_file_name_save: Optional[str]               = None
     cfg_file_name_load: Optional[str]               = None
-    override_from_cmd: bool                         = False
+    overwrite_from_cmd: bool                         = False
     json_encoder: ClassVar[Type[json.JSONEncoder]]  = CustomJSONEncoder
 
     cmd_args: Dict[str, Any]    = field(default_factory=dict)
@@ -93,40 +93,14 @@ class BaseConfig:
             cfg_lines.append(f"{field.name}={getattr(self, field.name)}")
         return "\n".join(cfg_lines)
 
-    def update_from_dict(self, dict_data: Dict, dict_key: str = "extras") -> None:
-        extras_dict_tmp = getattr(self, dict_key)
-        # Loop through the extra attributes
-        for key, value in dict_data[dict_key].items():
-            if hasattr(extras_dict_tmp, key):
-                if getattr(extras_dict_tmp,key) != value:
-                    log.debug("Overriding %s arg %r with value %r passed from command line", dict_key, key, value)
-                    extras_dict_tmp[key] = value
-            else:
-                log.debug("Adding new %s arg %r with value %r that is not in the saved config file", dict_key, key, value)
-                extras_dict_tmp[key] = value
-        setattr(self, dict_key, extras_dict_tmp)
-
-    def update(self, data: Dict) -> None:
-        for key, value in data.items():
-            if hasattr(self, key):
-                if getattr(self,key) != value:
-                    # Deal with extras
-                    if key == "extras":
-                        self.update_from_dict(data[key], key)
-                    else:
-                        log.debug("Overriding arg %r with value %r passed from command line", key, value)
-                        setattr(self, key, value)
-            else:
-                log.warning("Command Line arg %r with value %r does not match Config Key", key, value)
-        log.info("Fully updated the Config Class!")
-
-
+    # save/load
     def save(self, cfg_save_filename: Optional[Path] = None) -> None:
         if cfg_save_filename == None:
             cfg_save_filename = self.get_cfg_file_path("save")
         else:
             ensure_parents_exist(cfg_save_filename)
         assert cfg_save_filename is not None, "cfg_save_dir must be set before saving config"
+        log.info("Saving Config to %s" % (cfg_save_filename))
         with open(cfg_save_filename, "w") as f:
             json.dump(self.to_dict(), f, indent=2, cls=self.json_encoder) # Alternative would be to adjust self.to_dict()
 
@@ -154,8 +128,7 @@ class BaseConfig:
         )
 
     @classmethod
-    def cfg_load(cls: Type[TConfig], cfg_filename: Path) -> TConfig:
-
+    def cfg_load(cls: Type[TConfig], cfg_filename: Path, overwrite: dict) -> TConfig:
         if not Path.is_file(cfg_filename):
             raise Exception(
                 f"Could not load saved parameters for experiment {cls.cfg_file_name_load} "
@@ -166,13 +139,19 @@ class BaseConfig:
         with open(cfg_filename, "r") as json_file:
             json_params = json.load(json_file)
             log.warning("Loading existing experiment configuration from %s", cfg_filename)
-            log.debug(json_params)
+
+        if json_params["overwrite_from_cmd"] and overwrite is not None:
+            log.debug("Overwriting the following arguments: %s" % (overwrite))
+            for key, value in overwrite.items():
+                if key.split(".")[0] in [f.name for f in fields(cls)]:
+                    if value != json_params[key.split(".")[0]] and value is not None:
+                        log.info(f"Overwriting {key} with {value}")
+                        apply_overwrite(json_params, key, value)
+                else:
+                    log.warning("Key %s for overwriting not found in %s fields" % (key, str(cls)))
+            log.info("Overwriting completed")
 
         loaded_cfg: "BaseConfig" = cls.from_dict(json_params)
-
-        if loaded_cfg.override_from_cmd:
-            log.debug("Start overriding from cmd")
-            loaded_cfg.update(cls.cmd_args)
         
         return loaded_cfg
 
