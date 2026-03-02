@@ -20,7 +20,8 @@ def add_config_params(parser: argparse.ArgumentParser):
     parser.add_argument("--current_run_dir", type=Path, default=None, help="Current run directory")
 
     # Config
-    parser.add_argument("--cfg_file_name", type=str, default=None, help="Config file name")
+    parser.add_argument("--cfg_file_name_save", type=str, default=None, help="Config file name for saving")
+    parser.add_argument("--cfg_file_name_load", type=str, default=None, help="Config file name for loading")
     parser.add_argument("--overwrite_from_cmd", type=str2bool, default=None, help="Overwrite from command line")
     # cmd_args will be populated later, no CLI argument
 
