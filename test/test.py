@@ -19,6 +19,8 @@ TConfig = TypeVar("TConfig", bound="BaseConfig")
 class NestedDataClass:
     test_value_int: int = 5
     test_value_str: str = "Hello World"
+    test_dict: dict     = field(default_factory=dict)
+    test_dict2: dict     = field(default_factory=dict)
 
 @dataclass
 class TestConfig(BaseConfig):
@@ -27,6 +29,7 @@ class TestConfig(BaseConfig):
     test_date: datetime = datetime(2026,12,1)
 
     nested: NestedDataClass = field(default_factory=NestedDataClass)
+    nested2: NestedDataClass = field(default_factory=NestedDataClass)
 
 def add_test_params(parser):
     # Test Arguments
@@ -53,6 +56,14 @@ def testing():
     cfg.cfg_file_name_save = None
     cfg.save(ensure_dir_exists(cfg.current_run_dir / "configs") / 'test2.json')
     cfg.cmd_args["nested.test_value_int"] = 10
+    cfg.cmd_args["nested"] = {
+        "test_value_str": "Kein Hallo",
+        "test_dict": {
+            "malerisch": {}
+        }
+    }
+    cfg.cmd_args["nested.test_dict"] = {"third": TestConfig}
+    cfg.cmd_args["nested2.test_dict2"] = {"third": TestConfig}
     log.info(cfg.cmd_args)
     cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"), cfg.cmd_args)
     # log.debug(cfg2)

@@ -144,8 +144,7 @@ class BaseConfig:
             log.debug("Overwriting the following arguments: %s" % (overwrite))
             for key, value in overwrite.items():
                 if key.split(".")[0] in [f.name for f in fields(cls)]:
-                    if value != json_params[key.split(".")[0]] and value is not None:
-                        log.info(f"Overwriting {key} with {value}")
+                    if value is not None:
                         apply_overwrite(json_params, key, value)
                 else:
                     log.warning("Key %s for overwriting not found in %s fields" % (key, str(cls)))
