@@ -1,7 +1,7 @@
 import logging
 from colorlog import ColoredFormatter
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 
 
@@ -17,10 +17,13 @@ def infov(self, message, *args, **kwargs) -> None:
 logging.Logger.infov = infov # type: ignore
 
 
-def create_formatter(colour: bool) -> Union[ColoredFormatter,logging.Formatter]:
+def create_formatter(colour: bool, fmt: Optional[str] = None) -> Union[ColoredFormatter,logging.Formatter]:
+    if fmt is None:
+        fmt = "[{asctime}][{process:05d}][{module:.<10.10}][{lineno:04d}] {message}"
+        # fmt = "[{asctime}][{process:05d}][{module:.<5.5}][{funcName:.<15.15}][{lineno:04d}] {message}"
     if colour:
         return ColoredFormatter(
-            "%(log_color)s[%(asctime)s][%(process)05d] %(message)s",
+            "{log_color}" + fmt,
             datefmt=None,
             reset=True,
             log_colors={
@@ -32,10 +35,10 @@ def create_formatter(colour: bool) -> Union[ColoredFormatter,logging.Formatter]:
                 "CRITICAL": "red,bg_white",
             },
             secondary_log_colors={},
-            style="%",
+            style="{",
         )
     else:
-        return logging.Formatter(fmt="[%(asctime)s][%(process)05d] %(message)s", datefmt=None, style="%")
+        return logging.Formatter(fmt=fmt, datefmt=None, style="%")
 
 def create_file_handler(path: Path, level) -> logging.FileHandler:
     file_handler = logging.FileHandler(path)
