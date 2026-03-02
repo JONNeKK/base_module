@@ -87,6 +87,12 @@ class BaseConfig:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+    def to_str(self) -> str:
+        cfg_lines = []
+        for field in fields(self):
+            cfg_lines.append(f"{field.name}={getattr(self, field.name)}")
+        return "\n".join(cfg_lines)
+
     def update_from_dict(self, dict_data: Dict, dict_key: str = "extras") -> None:
         extras_dict_tmp = getattr(self, dict_key)
         # Loop through the extra attributes

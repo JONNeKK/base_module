@@ -56,6 +56,7 @@ def testing():
     log.debug(cfg2)
     log.debug(cfg2.nested.test_value_int)
     log.info(cfg2.json_encoder)
+    log.debug(cfg2.to_str())
     
 
 
