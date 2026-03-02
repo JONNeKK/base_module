@@ -128,7 +128,7 @@ class BaseConfig:
         )
 
     @classmethod
-    def cfg_load(cls: Type[TConfig], cfg_filename: Path, overwrite: dict) -> TConfig:
+    def cfg_load(cls: Type[TConfig], cfg_filename: Path, overwrite: Optional[dict] = None) -> TConfig:
         if not Path.is_file(cfg_filename):
             raise Exception(
                 f"Could not load saved parameters for experiment {cls.cfg_file_name_load} "
