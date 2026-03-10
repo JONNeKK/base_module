@@ -1,5 +1,6 @@
 import logging
 import argparse
+import json
 from typing import Dict, Any, Tuple, Type, Callable, List, TypeVar, Generic
 
 from .arguments import add_extra_params, add_config_params
@@ -31,14 +32,20 @@ class BaseCLIParser(Generic[TConfig]):
         args, _ = parser.parse_known_args(argv)
         return parser, args
 
+    def parse_value(self, v: str) -> Any:
+        try:
+            return json.loads(v)
+        except Exception as e:
+            log.warning(e)
+            return v
 
-
-    def parse_extras(self, items) -> Dict[str, Any]:
+    def parse_dict(self, items) -> Dict[str, Any]:
         extras = {}
         for item in items:
             if "=" not in item:
                 raise ValueError(f"Extras must be KEY=VALUE, got '{item}'")
             key, value = item.split("=", 1)
+            value = self.parse_value(value)
             extras[key] = value
         return extras
 
@@ -65,7 +72,7 @@ class BaseCLIParser(Generic[TConfig]):
     def parse_args(self, argv=None) -> TConfig:
         parser, args = self.build_parser(argv)
         
-        extras = self.parse_extras(args.extra)
+        extras = self.parse_dict(args.extra)
         delattr(args, "extra")
         args.extras = extras
 
