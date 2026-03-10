@@ -40,14 +40,17 @@ class BaseCLIParser(Generic[TConfig]):
             return v
 
     def parse_dict(self, items) -> Dict[str, Any]:
-        extras = {}
+        d = {}
         for item in items:
             if "=" not in item:
                 raise ValueError(f"Extras must be KEY=VALUE, got '{item}'")
             key, value = item.split("=", 1)
             value = self.parse_value(value)
-            extras[key] = value
-        return extras
+            d[key] = value
+        return d
+    
+    def parse_dicts(self, args):
+        args.extras = self.parse_dict(args.extras)
 
     def parse_base(self, args: argparse.Namespace) -> dict:
         unpacked = {}
@@ -72,9 +75,7 @@ class BaseCLIParser(Generic[TConfig]):
     def parse_args(self, argv=None) -> TConfig:
         parser, args = self.build_parser(argv)
         
-        extras = self.parse_dict(args.extra)
-        delattr(args, "extra")
-        args.extras = extras
+        self.parse_dicts(args)
 
         cli_args = self.parse_base(args)
 

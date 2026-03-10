@@ -7,7 +7,7 @@ from .utils.parsing import str2bool
 def add_extra_params(parser: argparse.ArgumentParser):
     # Controlled extras
     parser.add_argument(
-        "--extra",
+        "--extras",
         action="append",
         default=[],
         metavar="KEY=VALUE",
