@@ -1,5 +1,6 @@
 from typing import Dict, Any, Type, List
 import json
+from copy import deepcopy
 from datetime import date, datetime
 from pathlib import Path
 from decimal import Decimal
@@ -41,28 +42,55 @@ DEFAULT_CONVERTERS: Dict[Type, Any] = {
 DEFAULT_CAST: List[Type] = [list, tuple, set]
 
 
-def deep_merge(original: Dict, new: Dict) -> Dict:
+def deep_merge(
+    original: dict[str, Any],
+    new: dict[str, Any],
+    *,
+    modify_in_place: bool = False,
+    allow_new_keys: bool = True,
+) -> dict[str, Any]:
     """
     Recursively merge `new` into `original`.
-    Values in `new` overwrite those in `original`.
+
+    Existing values are overwritten by values from `new`.
+    Nested dictionaries are merged recursively.
+
+    Args:
+        original: Dictionary to use as the base for the merge.
+        new: Dictionary whose values are merged into `original`.
+        modify_in_place: If True, modify `original` directly.
+            If False, merge into a deep copy of `original`.
+        allow_new_keys: If False, keys not already present in
+            `original` are ignored.
+
+    Returns:
+        The merged dictionary. If `modify_in_place` is True,
+        this is the same object as `original`.
+
     """
+    if modify_in_place:
+        result = original
+    else:
+        result = deepcopy(original)
+
     for key, value in new.items():
-        if (
-            key in original
-            and isinstance(original[key], dict)
-            and isinstance(value, dict)
-        ):
-            deep_merge(original[key], value)
+        if key not in result:
+            if allow_new_keys:
+                result[key] = deepcopy(value)
+            continue
+
+        if isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(
+                result[key],
+                value,
+                modify_in_place=modify_in_place,
+                allow_new_keys=allow_new_keys,
+            )
         else:
-            if key not in original.keys():
-                log.info(f"DEEPMERGE: Adding key {key} with value {value}")
-                original[key] = value
-            elif value != original[key]:
-                log.info(f"DEEPMERGE: Overwriting key {key} with value {value}")
-                original[key] = value
-            else:
-                log.debug(f"DEEPMERGE: {value} for {key} already exists.")
-    return original
+            result[key] = deepcopy(value)
+
+    return result
+
 
 
 def apply_overwrite(config_dict: dict, key: str, value: Any):
