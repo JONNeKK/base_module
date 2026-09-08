@@ -1,4 +1,4 @@
-from typing import Dict, Any, Type, List
+from typing import Any, Type, List
 import json
 from copy import deepcopy
 from datetime import date, datetime
@@ -30,14 +30,6 @@ class CustomJSONEncoder(json.JSONEncoder):
 
         return super().default(o)
 
-# --- central default converters ---
-DEFAULT_CONVERTERS: Dict[Type, Any] = {
-    datetime: datetime.fromisoformat,
-    date: date.fromisoformat,
-    Decimal: Decimal,
-    UUID: UUID,
-    Path: Path,
-}
 
 DEFAULT_CAST: List[Type] = [list, tuple, set]
 

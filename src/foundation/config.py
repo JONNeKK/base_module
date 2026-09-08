@@ -1,15 +1,29 @@
-from dataclasses import dataclass, asdict, field, fields
-from typing import Optional, Dict, Any, Type, TypeVar, ClassVar
+from dataclasses import dataclass, asdict, field, fields, is_dataclass
+from typing import (
+    Optional, 
+    Dict, 
+    Any, 
+    Type, 
+    TypeVar, 
+    ClassVar, 
+    Callable, 
+    get_args, 
+    get_origin, 
+    get_type_hints,
+    cast
+) 
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
+from decimal import Decimal
 from enum import Enum
+from uuid import UUID
 from dacite import from_dict as dacite_from_dict, Config as DaciteConfig
 
 from .utils.parsing import is_dataclass_type
 from .utils.filesystem import ensure_dir_exists, ensure_parents_exist
-from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, DEFAULT_CONVERTERS, apply_overwrite
+from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, apply_overwrite
 from .utils.git import get_git_commit_hash
 
 log = logging.getLogger(__name__)
@@ -104,14 +118,67 @@ class BaseConfig:
         with open(cfg_save_filename, "w") as f:
             json.dump(self.to_dict(), f, indent=2, cls=self.json_encoder) # Alternative would be to adjust self.to_dict()
 
-    @classmethod
-    def build_type_hooks(cls) -> Dict[Type, Any]:
-        hooks = dict(DEFAULT_CONVERTERS)  # start with base converters
+    @classmethod 
+    def extra_type_hooks(cls) -> dict[type, Callable[[Any], Any]]: 
+        return { 
+            Path: Path, 
+            UUID: UUID, 
+            Decimal: Decimal,
+            datetime: datetime.fromisoformat, 
+            date: date.fromisoformat,
+        }
 
-        # automatically add Enum converters for any Enum fields
-        for f in fields(cls):
-            if isinstance(f.type, type) and issubclass(f.type, Enum):
-                hooks[f.type] = lambda v, t=f.type: t(v)
+    @classmethod
+    def build_type_hooks(cls) -> dict[type, Callable[[Any], Any]]:
+        """Build dacite type hooks for enums found in a dataclass tree."""
+
+        hooks: dict[type, Callable[[Any], Any]] = {}
+        visited: set[type] = set()
+
+        def visit_annotation(annotation: Any) -> None:
+            origin = get_origin(annotation)
+
+            if origin is None:
+                if not isinstance(annotation, type):
+                    return
+
+                if issubclass(annotation, Enum):
+                    hooks.setdefault(
+                        annotation,
+                        lambda value, enum_cls=annotation: enum_cls(value),
+                    )
+                    return
+
+                if is_dataclass(annotation):
+                    visit_dataclass(annotation)
+
+                return
+
+            for arg in get_args(annotation):
+                visit_annotation(arg)
+
+        def visit_dataclass(dataclass_type: type) -> None:
+            if dataclass_type in visited:
+                return
+
+            visited.add(dataclass_type)
+            
+            extra_type_hooks = getattr(dataclass_type, "extra_type_hooks", None)
+            if callable(extra_type_hooks):
+                extra_type_hooks = cast(
+                    Callable[[], dict[type, Callable[[Any], Any]]],
+                    extra_type_hooks,
+                )
+                hooks.update(extra_type_hooks())
+
+
+            type_hints = get_type_hints(dataclass_type)
+
+            for field in fields(dataclass_type):
+                visit_annotation(type_hints[field.name])
+
+        visit_dataclass(cls)
+
         return hooks
 
     @classmethod
