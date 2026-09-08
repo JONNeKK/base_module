@@ -183,10 +183,7 @@ class BaseConfig:
 
     @classmethod
     def from_dict(cls, data: dict):
-        hooks = {}
-        for base in reversed(cls.__mro__):
-            if hasattr(base, "build_type_hooks"):
-                hooks.update(base.build_type_hooks())
+        hooks = cls.build_type_hooks()
 
         return dacite_from_dict(
             data_class=cls,
