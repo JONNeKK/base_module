@@ -7,7 +7,7 @@ import logging
 import sys
 
 
-from foundation import BaseConfig, BaseCLIParser
+from foundation import BaseConfig, BaseCLIParser, BaseConfigManager
 from foundation.log import init_root_logger
 from foundation.utils import ensure_dir_exists
 
@@ -24,6 +24,7 @@ class NestedDataClass:
 
 @dataclass
 class TestConfig(BaseConfig):
+    CONFIG_VERSION = 2
     test_value_int: int = 10
     test_value_str: str = "Hello World"
     test_date: datetime = datetime(2026,12,1)
@@ -50,11 +51,12 @@ def testing():
     log = logging.getLogger()
     cli_parser = CLIParser(TestConfig)
     cfg: TestConfig = cli_parser.parse_args()
+    cfg_manager = BaseConfigManager(TestConfig)
     log.debug(cfg.nested.test_value_int)
     cfg.cfg_file_name_save = cfg.cfg_file_name_load = "test"
     # cfg.save()
     cfg.cfg_file_name_save = None
-    cfg.save(ensure_dir_exists(cfg.current_run_dir / "configs") / 'test2.json')
+    cfg_manager.save(config = cfg, path = ensure_dir_exists(cfg.current_run_dir / "configs") / 'test2.json')
     cfg.cmd_args["nested.test_value_int"] = 10
     cfg.cmd_args["nested"] = {
         "test_value_str": "Kein Hallo",
@@ -65,7 +67,7 @@ def testing():
     cfg.cmd_args["nested.test_dict"] = {"third": TestConfig}
     cfg.cmd_args["nested2.test_dict2"] = {"third": TestConfig}
     log.info(cfg.cmd_args)
-    cfg2: TestConfig = TestConfig.cfg_load(cfg.get_cfg_file_path("load"), cfg.cmd_args)
+    cfg2: TestConfig = cfg_manager.load(cfg.get_cfg_file_path("load"))
     # log.debug(cfg2)
     # log.debug(cfg2.nested.test_value_int)
     log.info(cfg2.log_level)

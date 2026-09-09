@@ -7,6 +7,7 @@ from typing import (
     TypeVar, 
     ClassVar, 
     Callable, 
+    Generic,
     get_args, 
     get_origin, 
     get_type_hints,
@@ -38,6 +39,7 @@ class BaseConfig:
     by command line arguments. All that are set to None should be overwritten.
     This is not enforced, so beware of runtime errors.
     """
+    CONFIG_VERSION: ClassVar[int]
 
     # File Context
     cfg_save_dir: Path      = Path("configs")
@@ -106,17 +108,6 @@ class BaseConfig:
         for field in fields(self):
             cfg_lines.append(f"{field.name}={getattr(self, field.name)}")
         return "\n".join(cfg_lines)
-
-    # save/load
-    def save(self, cfg_save_filename: Optional[Path] = None) -> None:
-        if cfg_save_filename == None:
-            cfg_save_filename = self.get_cfg_file_path("save")
-        else:
-            ensure_parents_exist(cfg_save_filename)
-        assert cfg_save_filename is not None, "cfg_save_dir must be set before saving config"
-        log.info("Saving Config to %s" % (cfg_save_filename))
-        with open(cfg_save_filename, "w") as f:
-            json.dump(self.to_dict(), f, indent=2, cls=self.json_encoder) # Alternative would be to adjust self.to_dict()
 
     @classmethod 
     def extra_type_hooks(cls) -> dict[type, Callable[[Any], Any]]: 
@@ -191,36 +182,69 @@ class BaseConfig:
             config=DaciteConfig(type_hooks=hooks, cast=DEFAULT_CAST)
         )
 
-    @classmethod
-    def cfg_load(cls: Type[TConfig], cfg_filename: Path, overwrite: Optional[dict] = None) -> TConfig:
-        if not Path.is_file(cfg_filename):
-            raise Exception(
-                f"Could not load saved parameters for experiment {cls.cfg_file_name_load} "
-                f"(file {cfg_filename} not found). Check that you have the correct experiment name "
-                f"and --train_dir is set correctly."
-            )
-
-        with open(cfg_filename, "r") as json_file:
-            json_params = json.load(json_file)
-            log.warning("Loading existing experiment configuration from %s", cfg_filename)
-
-        if json_params["overwrite_from_cmd"] and overwrite is not None:
-            log.debug("Overwriting the following arguments: %s" % (overwrite))
-            for key, value in overwrite.items():
-                if key.split(".")[0] in [f.name for f in fields(cls)]:
-                    if value is not None:
-                        apply_overwrite(json_params, key, value)
-                else:
-                    log.warning("Key %s for overwriting not found in %s fields" % (key, str(cls)))
-            log.info("Overwriting completed")
-
-        loaded_cfg: "BaseConfig" = cls.from_dict(json_params)
-        
-        return loaded_cfg
 
     def validate(self):
         pass
 
 
+class BaseConfigManager(Generic[TConfig]):
+    """Load and save a specific BaseConfig type."""
+
+    def __init__(self, config_type: type[TConfig]):
+        self.config_type = config_type
+
+    def save(self, config: TConfig, path: Path) -> None:
+        """Save a configuration to JSON."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        log.info("Saving configuration to %s", path)
+
+        data = config.to_dict()
+
+        # CONFIG_VERSION is class metadata, so it is not included
+        # by dataclasses.asdict().
+        data["config_version"] = config.CONFIG_VERSION
+
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(
+                data,
+                f,
+                indent=2,
+                cls=config.json_encoder,
+            )
+
+    def load(self, path: Path) -> TConfig:
+        """Load a configuration from JSON."""
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Configuration file not found: {path}"
+            )
+
+        log.info("Loading configuration from %s", path)
+
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        stored_version = data.get("config_version")
+
+        if stored_version is None:
+            raise ValueError(
+                f"Configuration {path} has no config_version"
+            )
+
+        if stored_version != self.config_type.CONFIG_VERSION:
+            raise ValueError(
+                f"Configuration version mismatch for {self.config_type.__name__}: "
+                f"file={stored_version}, "
+                f"current={self.config_type.CONFIG_VERSION}"
+            )
+
+        # config_version is metadata rather than a dataclass field.
+        data.pop("config_version", None)
+
+        config = self.config_type.from_dict(data)
+        config.validate()
+
+        return config
 
     
