@@ -23,7 +23,7 @@ from uuid import UUID
 from dacite import from_dict as dacite_from_dict, Config as DaciteConfig
 
 from .utils.parsing import is_dataclass_type
-from .utils.filesystem import ensure_dir_exists, ensure_parents_exist
+from .utils.filesystem import ensure_dir_exists, atomic_write
 from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, apply_overwrite
 from .utils.git import get_git_commit_hash
 
@@ -205,13 +205,16 @@ class BaseConfigManager(Generic[TConfig]):
         # by dataclasses.asdict().
         data["config_version"] = config.CONFIG_VERSION
 
-        with path.open("w", encoding="utf-8") as f:
+        def json_writer(f):
             json.dump(
                 data,
                 f,
                 indent=2,
                 cls=config.json_encoder,
+                ensure_ascii=False
             )
+        atomic_write(path=path, writer=json_writer, encoding="utf-8")
+            
 
     def load(self, path: Path) -> TConfig:
         """Load a configuration from JSON."""
