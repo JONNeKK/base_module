@@ -60,9 +60,6 @@ class BaseConfig:
     # Debug Flags
     debug: bool = False
 
-    # Logging
-    log_dir: Optional[str]  = None
-    log_level: int          = logging.INFO
 
 
     # Extras which can be arbitrarily defined at runtime
@@ -95,10 +92,6 @@ class BaseConfig:
         json_name = cfg_file_name + '.json'
         return ensure_dir_exists(self.current_run_dir / self.cfg_save_dir) / json_name
     
-    def get_logfile_path(self) -> Path:
-        assert self.log_dir, "No log directory specified!"
-        logfile_name = f"log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-        return ensure_dir_exists(self.current_run_dir / self.log_dir) / logfile_name
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
