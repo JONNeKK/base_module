@@ -6,5 +6,7 @@ from .log_setup import (
     create_file_handler,
     create_stream_handler,
     create_formatter,
-    init_root_logger
+    init_root_logger,
+    enable_logging,
+    disable_logging
 )

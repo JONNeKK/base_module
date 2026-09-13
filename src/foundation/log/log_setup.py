@@ -85,3 +85,15 @@ def init_root_logger(default_level = logging.DEBUG):
     stream_handler.setFormatter(create_formatter(colour = True))
     logger.addHandler(stream_handler)
 
+# Enable, Disable logging for BaseModule
+PACKAGE_LOGGER = "mybase"
+
+
+def enable_logging() -> None:
+    logger = logging.getLogger(PACKAGE_LOGGER)
+    logger.propagate = True
+
+
+def disable_logging() -> None:
+    logger = logging.getLogger(PACKAGE_LOGGER)
+    logger.propagate = False
