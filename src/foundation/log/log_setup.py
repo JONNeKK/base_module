@@ -38,7 +38,7 @@ def create_formatter(colour: bool, fmt: Optional[str] = None) -> Union[ColoredFo
             style="{",
         )
     else:
-        return logging.Formatter(fmt=fmt, datefmt=None, style="%")
+        return logging.Formatter(fmt=fmt, datefmt=None, style="{")
 
 def create_file_handler(path: Path, level) -> logging.FileHandler:
     file_handler = logging.FileHandler(path)
