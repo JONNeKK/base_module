@@ -35,12 +35,12 @@ DEFAULT_CAST: List[Type] = [list, tuple, set]
 
 
 def deep_merge(
-    original: dict[str, Any],
-    new: dict[str, Any],
+    original: dict[Any, Any],
+    new: dict[Any, Any],
     *,
     modify_in_place: bool = False,
     allow_new_keys: bool = True,
-) -> dict[str, Any]:
+) -> dict[Any, Any]:
     """
     Recursively merge `new` into `original`.
 
