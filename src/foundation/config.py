@@ -15,16 +15,14 @@ from typing import (
 ) 
 import logging
 import json
-from datetime import datetime, date
+from datetime import datetime
 from pathlib import Path
-from decimal import Decimal
 from enum import Enum
-from uuid import UUID
 from dacite import from_dict as dacite_from_dict, Config as DaciteConfig
 
 from .utils.parsing import is_dataclass_type
 from .utils.filesystem import ensure_dir_exists, atomic_write
-from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST, apply_overwrite
+from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST
 from .utils.git import get_git_commit_hash
 
 log = logging.getLogger(__name__)
@@ -106,10 +104,7 @@ class BaseConfig:
     def extra_type_hooks(cls) -> dict[type, Callable[[Any], Any]]: 
         return { 
             Path: Path, 
-            UUID: UUID, 
-            Decimal: Decimal,
             datetime: datetime.fromisoformat, 
-            date: date.fromisoformat,
         }
 
     @classmethod
@@ -146,14 +141,16 @@ class BaseConfig:
                 return
 
             visited.add(dataclass_type)
-            
-            extra_type_hooks = getattr(dataclass_type, "extra_type_hooks", None)
-            if callable(extra_type_hooks):
-                extra_type_hooks = cast(
-                    Callable[[], dict[type, Callable[[Any], Any]]],
-                    extra_type_hooks,
-                )
-                hooks.update(extra_type_hooks())
+
+            for base in reversed(dataclass_type.__mro__): # Bottom up -> child classes can override parent type hooks
+                if is_dataclass(base): 
+                    extra_type_hooks = getattr(base, "extra_type_hooks", None)
+                    if callable(extra_type_hooks):
+                        extra_type_hooks = cast( # solely for type checkers
+                            Callable[[], dict[type, Callable[[Any], Any]]],
+                            extra_type_hooks,
+                        )
+                        hooks.update(extra_type_hooks())
 
 
             type_hints = get_type_hints(dataclass_type)
