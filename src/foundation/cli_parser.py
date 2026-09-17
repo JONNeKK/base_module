@@ -80,6 +80,5 @@ class BaseCLIParser(Generic[TConfig]):
         cli_args = self.parse_base(args)
 
         cfg = self.config_class.from_dict(cli_args) 
-        cfg.cmd_args = cli_args
         return cfg
 

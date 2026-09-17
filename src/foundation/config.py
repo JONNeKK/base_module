@@ -1,6 +1,5 @@
 from dataclasses import dataclass, asdict, field, fields, is_dataclass
 from typing import (
-    Optional, 
     Dict, 
     Any, 
     Type, 
@@ -21,7 +20,7 @@ from enum import Enum
 from dacite import from_dict as dacite_from_dict, Config as DaciteConfig
 
 from .utils.parsing import is_dataclass_type
-from .utils.filesystem import ensure_dir_exists, atomic_write
+from .utils.filesystem import atomic_write
 from .utils.configuration import CustomJSONEncoder, DEFAULT_CAST
 from .utils.git import get_git_commit_hash
 
@@ -39,26 +38,12 @@ class BaseConfig:
     """
     CONFIG_VERSION: ClassVar[int]
 
-    # File Context
-    cfg_save_dir: Path      = Path("configs")
-    current_run_dir: Path   = Path.cwd()
-
     # Git
     git_hash: str       = "empty"
     git_repo_name: str  = "empty"
 
     # Config
-    cfg_file_name_save: Optional[str]               = None
-    cfg_file_name_load: Optional[str]               = None
-    overwrite_from_cmd: bool                         = False
     json_encoder: ClassVar[Type[json.JSONEncoder]]  = CustomJSONEncoder
-
-    cmd_args: Dict[str, Any]    = field(default_factory=dict)
-
-    # Debug Flags
-    debug: bool = False
-
-
 
     # Extras which can be arbitrarily defined at runtime
     extras: Dict[str, Any]  = field(default_factory=dict)
@@ -66,30 +51,15 @@ class BaseConfig:
 
 
     def __post_init__(self):
-        if self.debug:
-            log.info("Debugging enabled!")
-            self.log_level = logging.DEBUG
-            log.debug("Retrieving git hash & repo name")
-            self.git_hash, self.git_repo_name = get_git_commit_hash()
+        pass
 
+    def populate_git_info(self):
+        log.debug("Retrieving git hash & repo name")
+        self.git_hash, self.git_repo_name = get_git_commit_hash()
     
     @classmethod
     def collect_nested_dataclasses(cls):
         return [f.name for f in fields(cls) if is_dataclass_type(f.type)]
-
-
-
-    def get_cfg_file_path(self, mode: str) -> Path:
-        if mode == "load":
-            cfg_file_name = self.cfg_file_name_load
-        elif mode == "save":
-            cfg_file_name = self.cfg_file_name_save
-        else:
-            raise NameError(f"Incorrect mode {mode} specified in Config.get_cfg_file_path!")
-        assert cfg_file_name, "There is no file name to return a config"
-        json_name = cfg_file_name + '.json'
-        return ensure_dir_exists(self.current_run_dir / self.cfg_save_dir) / json_name
-    
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
